@@ -27,7 +27,7 @@ def missings():
     for year, month, region in gen(False):
         filename = get_txt_file((year, month, region))
         if not os.path.exists(filename):
-            errorfiles.write(f"{year}, {month:02d}, {region}\n")
+            errorfile.write(f"{year}, {month:02d}, {region}\n")
         errorfile.close()
 
 
@@ -52,7 +52,7 @@ def analyze_missing(printing=True, writing=True):
 
 def analyze_filesize(printing=True, writing=True):
     df = pd.read_csv("out/csv/filesizes.csv")
-    smallfiles = df.query("filesize" < 1024)
+    smallfiles = df.query("filesize < 1024")
     if printing:
         print(smallfiles)
     if writing:

@@ -11,7 +11,6 @@ def gen(skip=False):
 
         except FileNotFoundError:
             skip = False
-
     regions = (
         "at",
         "bo",
@@ -27,13 +26,12 @@ def gen(skip=False):
         "sl",
         "su",
     )
-
     for year in range(1970, 2021):
         os.makedirs(f"txt/{year}", exist_ok=True)
         for month in range(1, 13):
             if skip and (year, month) in norelease:
                 continue
-            os.makedirs(f"txt/{year}/{month:0d2}", exist_ok=True)
+            os.makedirs(f"txt/{year}/{month:02d}", exist_ok=True)
             for region in regions:
                 yield year, month, region
 

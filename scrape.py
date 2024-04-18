@@ -14,7 +14,7 @@ def scrape(skip=False):
         header = "https://www.minneapolisfed.org/beige-book-reports/"
         url = header + f"{year}/{year}-{month:02d}-{region}"
         try:
-            txt = get_txt(url)
+            txt = get_text(url)
             with open(get_txt_file((year, month, region)), "w") as f:
                 f.write(txt)
             print("y")
@@ -24,7 +24,7 @@ def scrape(skip=False):
     errorfile.close()
 
 
-def get_txt(url):
+def get_text(url):
     r = requests.get(url)
     if r.status_code == 404:
         raise ValueError
@@ -37,7 +37,7 @@ def get_txt(url):
     return raw
 
 
-def get_data(url):
+def get_date(url):
     r = requests.get(url)
     if r.status_code == 404:
         raise ValueError
@@ -50,7 +50,7 @@ def get_data(url):
     return raw
 
 
-def scrape_data():
+def scrape_date():
     outfile = open("out/csv/dates.csv", "w")
     outfile.write("year,month,day\n")
     for year, month, region in gen(skip=True):
@@ -58,7 +58,7 @@ def scrape_data():
             print(f"{year} {month}")
             header = "https://www.minneapolisfed.org/beige-book-reports/"
             url = header + f"{year}/{year}-{month:02d}-{region}"
-            txt = get_data(url)
+            txt = get_date(url)
             day = int(txt.split()[1][:-1])
             outfile.write(f"{year}, {month}, {day}\n")
     outfile.close()

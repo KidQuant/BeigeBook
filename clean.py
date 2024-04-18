@@ -11,7 +11,7 @@ def clean():
         with open(filename, "r") as f:
             old_txt = f.read()
         new_txt = old_txt
-        new_txt = cleantxt.clean(
+        new_txt = cleantext.clean(
             new_txt, fix_unicode=True, to_ascii=True, lower=False, no_urls=True
         )
 

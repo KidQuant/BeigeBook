@@ -6,10 +6,11 @@ from tools import *
 
 
 def analyze_all():
-    outfile = open("out/csv/sentiments.csv", "W")
+    outfile = open("out/csv/sentiments.csv", "w")
     outfile.write("year,month,region,v_com,v_neg,v_neu,v_pos,t_sub,t_pol,f_score\n")
     vader = nltk.sentiment.vader.SentimentIntensityAnalyzer()
     tb = textblob.en.sentiments.PatternAnalyzer()
+    fs = flair.models.TextClassifier.load("en-sentiment")
     for year, month, region in gen(skip=True):
         print(f"{year} {month:02d} {region}")
         filename = get_txt_file((year, month, region))

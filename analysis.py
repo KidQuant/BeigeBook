@@ -19,14 +19,13 @@ def make_dataset(printing=True):
     cols.insert(0, cols.pop(cols.index("date")))
     out = merged.reindex(columns=cols).drop(columns=["year", "month", "day"])
     out["v_diff"] = out["v_pos"] - out["v_neg"]
-    # remove outlier from missing 1971 document
+    # remove outlier from missing 1971
     out["t_pol"] = out["t_pol"].apply(lambda x: 0 if x <= -0.2 else x)
     out["f_fixed"] = out["f_score"].apply(lambda x: x + 1 if x < 0 else x).apply(np.log)
     for i in range(3):
         out[NORM[i]] = (out[UNNORM[i]] - out[UNNORM[i]].mean()) / out[UNNORM[i]].std()
     if printing:
         print(out)
-
     return out
 
 
@@ -35,7 +34,7 @@ def reshape_data(df, printing=False, cols=NORM):
     if printing:
         for dfi in dfs:
             print(dfi.describe())
-    return dfs
+        return dfs
 
 
 def get_recessions():
@@ -45,7 +44,7 @@ def get_recessions():
 def get_econ_data():
     df_gdp = pd.read_csv("out/csv/gdp.csv", parse_dates=["DATE"])
     df_unrate = pd.read_csv("out/csv/unrate.csv", parse_dates=["DATE"])
-    df_stocks = pd.read_csv("out/csv/stocks.csv", parse_dates=["DATES"])
+    df_stocks = pd.read_csv("out/csv/stocks.csv", parse_dates=["DATE"])
     df = df_gdp.merge(df_unrate, how="outer", on="DATE").merge(
         df_stocks, how="outer", on="DATE"
     )
@@ -65,26 +64,21 @@ def add_recessions(ax, df=None, alpha=0.3, color="gray"):
         )
 
 
-def histograms(
+def histogram(
     df,
     saveplot=False,
     show=True,
     alpha=0.5,
     bins=100,
-    colors=("c0", "C1", "C2"),
+    colors=("C0", "C1", "C2"),
     names=NAMES,
 ):
     fig, axs = plt.subplots(nrows=len(names), ncols=1, figsize=(12, 2 + 2 * len(names)))
-    for (
-        var,
-        ax,
-        c,
-    ) in zip(UNNORM, axs, colors):
+    for var, ax, c in zip(UNNORM, axs, colors):
         df[var].hist(ax=ax, bins=bins, color=c)
     for ax, name in zip(axs, names):
         ax.set_title(name)
     fig.suptitle("Histogram of Unnormalized Sentiment Scores")
-    fig.tight_layout(rect=[0, 0.03, 1, 0.95])
     if saveplot:
         plt.savefig("out/figs/hist-unnorm.png")
 
@@ -94,19 +88,19 @@ def correlations(df, saveplot=False, show=True, printing=True, alpha=0.2):
     if printing:
         print(corr)
 
-        fig, ax = plt.subplots(figsize=(8, 8))
-        pd.plotting.scatter_matrix(df[UNNORM], ax=ax, alpha=alpha, diagonal="kde")
-        fig.suptitle("Scatter Matrix of Sentiment Scores")
-        if saveplot:
-            plt.savefig("out/figs/corr_unnorm.png")
-        if show:
-            plt.show()
+    fig, ax = plt.subplots(figsize=(8, 8))
+    pd.plotting.scatter_matrix(df[UNNORM], ax=ax, alpha=alpha, diagonal="kde")
+    fig.suptitle("Scatter Matrix of Sentiment Scores")
+    if saveplot:
+        plt.savefig("out/figs/corr_unnorm.png")
+    if show:
+        plt.show()
 
 
 def region_regression(df, printing=True):
     dfs = reshape_data(df)
     results = (
-        sm.OLS(df["su"], sm.add_contant(df.drop(columns=["su"]))).fit() for df in dfs
+        sm.OLS(df["su"], sm.add_constant(df.drop(columns=["su"]))).fit() for df in dfs
     )
     if printing:
         for result in results:
@@ -116,7 +110,7 @@ def region_regression(df, printing=True):
 
 def timeseries_plots(
     df, saveplot=False, show=True, width=3, colors=("C0", "C1", "C2"), names=NAMES
-):
+):  # pylint: disable=too-many-arguments
     dfs = reshape_data(df)
     recs = get_recessions()
     for dfi in dfs:
@@ -127,29 +121,27 @@ def timeseries_plots(
         "Normalized Sentiment Score of Summary Report",
         f"{width}-Month Moving Average Normalized Sentiment Score of Summary Report",
     ]
-
-    filelist = ["timesseries_su", "timesseries_suma"]
+    filelist = ["timeseries_su", "timeseries_suma"]
     for var, title, filename in zip(varlist, titlelist, filelist):
         fig, axs = plt.subplots(
             nrows=len(names), sharex=True, figsize=(12, 2 + 2 * len(names))
         )
-    for dfi, ax in zip(dfs, axs):
-        dfi[var].plot(ax=ax)
-    for ax, name in zip(axs, names):
-        add_recessions(ax, names)
-        ax.set_title(name)
-        ax.set_xlabel("Year")
-        ax.set_ylabel("Score")
-    fig.suptitle(title)
-    fig.autofmt_xdate()
-    fig.title_layout(rect=[0, 0.03, 1, 0.95])
-    if saveplot:
-        plt.savefig(f"out/figs/{filename}.png")
+        for dfi, ax in zip(dfs, axs):
+            dfi[var].plot(ax=ax)
+        for ax, name in zip(axs, names):
+            add_recessions(ax, df=recs)
+            ax.set_title(name)
+            ax.set_xlabel("Year")
+            ax.set_ylabel("Score")
+        fig.suptitle(title)
+        fig.autofmt_xdate()  # does nothing
+        fig.tight_layout(rect=[0, 0.03, 1, 0.95])
+        if saveplot:
+            plt.savefig(f"out/figs/{filename}.png")
 
     fig, ax = plt.subplots(figsize=(18, 6))
     for dfi, c in zip(dfs, colors):
         dfi["su_ma"].plot(ax=ax, color=c)
-
     add_recessions(ax, df=recs)
     ax.set_title(
         f"Comparison of {width}-Month Moving Average Normalized Sentiment Scores"
@@ -160,7 +152,7 @@ def timeseries_plots(
     ax.legend(handles=patches)
     fig.tight_layout()
     if saveplot:
-        plt.savefig("out/figs/timesseries_suma_overlap")
+        plt.savefig("out/figs/timeseries_suma_overlap")
 
     econ = get_econ_data()
     statlist = ["drgdp_int", "urate", "dstock"]
@@ -176,7 +168,7 @@ def timeseries_plots(
             # econ[stat].plot(ax=twin_ax, color="C1")
             twin_ax.plot(econ[stat], color="C1")
             ax.set_title(name)
-            ax.set_xlabel("Title")
+            ax.set_xlabel("Year")
             ax.set_ylabel("Score")
             twin_ax.set_ylabel(unit)
             add_recessions(ax, df=recs)
@@ -184,57 +176,56 @@ def timeseries_plots(
         fig.autofmt_xdate()
         fig.tight_layout(rect=[0, 0.03, 1, 0.95])
         if saveplot:
-            plt.savefig(f"out/figs/timesseries_suma_{stat}")
+            plt.savefig(f"out/figs/timeseries_suma_{stat}")
 
-        for dfi, name in zip(dfs, names):
-            fig, axs = plt.subplots(
-                nrows=5, ncols=3, sharex=True, sharey=True, figsize=(18, 10)
-            )
-            gs = axs[0, 0].get_gridspec()
-            for ax in axs[0, :]:
-                ax.remove()
-            ax_top = fig.add_subplots(gs[0, :])
-            dfi["su_ma"].plot(ax=ax_top)
-            ax_top.legend(handles=[mpl.patches.Patch(color="C0", label="Summary")])
-            ax_top.xaxis.tick_top()
-            ax_top.set_xlabel("")
-            add_recessions(ax_top, df=recs)
+    for dfi, name in zip(dfs, names):
+        fig, axs = plt.subplots(
+            nrows=5, ncols=3, sharex=True, sharey=True, figsize=(18, 10)
+        )
+        gs = axs[0, 0].get_gridspec()
+        for ax in axs[0, :]:
+            ax.remove()
+        ax_top = fig.add_subplot(gs[0, :])
+        dfi["su_ma"].plot(ax=ax_top)
+        ax_top.legend(handles=[mpl.patches.Patch(color="C0", label="Summary")])
+        ax_top.xaxis.tick_top()
+        ax_top.set_xlabel("")
+        add_recessions(ax_top, df=recs)
 
-            coords = (
-                ((4, 2), "at", "Atlanta"),
-                ((1, 2), "bo", "Boston"),
-                ((2, 0), "ch", "Chicago"),
-                ((2, 1), "cl", "Cleveland"),
-                ((4, 1), "da", "Dallas"),
-                ((3, 0), "kc", "Kanas City"),
-                ((1, 0), "mi", "Minneapolis"),
-                ((1, 1), "ny", "New York"),
-                ((2, 2), "ph", "Philadelphia"),
-                ((3, 2), "ri", "Richmond"),
-                ((4, 0), "sf", "San Franciso"),
-                ((3, 1), "sl", "St. Louis"),
-            )
+        coords = (
+            ((4, 2), "at", "Atlanta"),
+            ((1, 2), "bo", "Boston"),
+            ((2, 0), "ch", "Chicago"),
+            ((2, 1), "cl", "Cleveland"),
+            ((4, 1), "da", "Dallas"),
+            ((3, 0), "kc", "Kansas City"),
+            ((1, 0), "mi", "Minneapolis"),
+            ((1, 1), "ny", "New York"),
+            ((2, 2), "ph", "Philadelphia"),
+            ((3, 2), "ri", "Richmond"),
+            ((4, 0), "sf", "San Francisco"),
+            ((3, 1), "sl", "St. Louis"),
+        )
+        for coord, district, districtname in coords:
+            ax = axs[coord[0], coord[1]]
+            dfi[district].rolling(width, center=True).mean().plot(ax=ax)
+            ax.legend(handles=[mpl.patches.Patch(color="C0", label=districtname)])
+            ax.set_xlabel("Year")
+            add_recessions(ax, df=recs)
 
-            for coord, district, districtname in coords:
-                ax = axs[coord[0], coord[1]]
-                dfi[district].rolling(width, center=True).mean().plot(ax=ax)
-                ax.legend(handles=[mpl.patches.Patch(color="C0", label=districtname)])
-                ax.set_xlabel("Year")
-                add_recessions(ax, df=recs)
+        fig.suptitle(f"{name} Sentiment Score by Federal Reserve District")
+        fig.tight_layout(rect=[0, 0.03, 1, 0.95])
+        fig.subplots_adjust(wspace=0, hspace=0)
+        if saveplot:
+            plt.savefig(f"out/figs/timeseries_district_{name.lower()}")
 
-            fig.suptitle(f"{name} Sentiment Score by Federal Reserve District")
-            fig.tight_layout(rect=[0, 0.03, 1, 0.95])
-            fig.subplots_adjust(wspace=0, hspace=0)
-            if saveplot:
-                plt.savefig(f"out/figs/timeseries_district_{name.lower()}")
-
-        if show:
-            plt.show()
+    if show:
+        plt.show()
 
 
 if __name__ == "__main__":
     data = make_dataset(printing=False)
-    histograms(data, saveplot=True, show=False)
+    histogram(data, saveplot=True, show=False)
     correlations(data, saveplot=True, show=False)
     region_regression(data)
     timeseries_plots(data, saveplot=True, show=False)
